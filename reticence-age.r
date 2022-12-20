@@ -13,7 +13,9 @@ df <- subset(df, clage_vacsi != 0)
 df$n_cum_dose1 = df$n_cum_dose1_h + df$n_cum_dose1_f
 
 # Group by date and clage_vacsi
-df <- df %>% group_by(date, clage_vacsi) %>% summarise(n_cum_dose1 = sum(n_cum_dose1))
+df <- df %>% 
+  group_by(date, clage_vacsi) %>% 
+  summarise(n_cum_dose1 = sum(n_cum_dose1))
 
 ggplot(df, aes(x=date, y=n_cum_dose1, group=clage_vacsi)) +
   geom_line(aes(color=clage_vacsi))+
