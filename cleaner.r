@@ -8,5 +8,14 @@ df <- df[!apply(df[-1:-3], 1, function(x) all(x == 0)), ]
 
 # Order by date
 df <- df[order(df$jour), ]
-# Creation d'un nouveau csv
-write.csv2(df, "data_clean.csv", row.names = FALSE, quote = FALSE)
+# On recupere l'année de la date
+dfjour <- strsplit(df$jour, "-")
+df$annee <- sapply(dfjour, function(x) x[1])
+# Recuperation des années uniques
+annees <- unique(df$annee)
+
+# Création d'un csv par année
+for (i in 1:length(annees)) {
+  df2 <- df[df$annee == annees[i], ]
+  write.csv2(df2, paste0("data_clean_", annees[i], ".csv"), row.names = FALSE, quote = FALSE)
+}
