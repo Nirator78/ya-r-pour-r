@@ -13,7 +13,7 @@ df$date <- as.integer(df$jour)
 df <- subset(df, clage_vacsi != 0)
 
 # Filter by date before 2022-06-01
-df <- df %>% filter(jour < "2022-06-01")
+# df <- df %>% filter(jour < "2022-06-01")
 
 df$n_cum_dose1 <- df$n_cum_dose1_h + df$n_cum_dose1_f
 
@@ -39,6 +39,9 @@ ggplot(data = df, aes(jour, n_cum_dose1, group = clage_vacsi)) +
     labels = date_format(format = "%m-%Y"),
     breaks = date_breaks("2 month")
   ) +
+  ggtitle("% de vaccination par tranche d'âge") +
+  ylab("Pourcentage de la population vaccinée") +
+  xlab("Date") +
   theme(axis.text.x = element_text(angle = 60, hjust = 1)) +
   theme(legend.position = "bottom")
   ggsave("reticence-age.png", width = 100, height = 60, units = "cm", dpi = 300)
