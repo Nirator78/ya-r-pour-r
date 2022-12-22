@@ -9,9 +9,8 @@ df <- read.csv("data_clean.csv", header = TRUE, sep = ";")
 df$jour <- as.Date(df$jour, format = "%Y-%m-%d")
 df$date <- as.integer(df$jour)
 
-# Delete row with reg = 0
-df <- subset(df, reg != 0)
-
+# Delete row with clage_vacsi = 0
+df <- subset(df, clage_vacsi != 0)
 
 df$n_cum_dose1 <- df$n_cum_dose1_h + df$n_cum_dose1_f
 
