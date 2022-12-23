@@ -49,6 +49,33 @@ ui <- bootstrapPage(
             plotOutput("plotRegionDate2"),
         )
     ),
+    tags$hr(),
+    titlePanel("Vaccination par année / mois / Sexe"),
+    fluidRow(
+        column(6,
+            plotOutput("anneeMoisHomme"),
+        ),
+        column(6,
+            plotOutput("anneeMoisFemme"),
+        )
+    ),
+    tags$hr(),
+    titlePanel("Vaccination Régression Homme/Femme"),
+    fluidRow(
+        column(12,
+            plotOutput("anneeMoisHommeRegression"),
+        ),
+    ),
+    tags$hr(),
+    titlePanel("Prédiction vaccination Homme/Femme"),
+    fluidRow(
+        column(6,
+            plotOutput("prediHomme"),
+        ),
+        column(6,
+            plotOutput("prediFemme"),
+        ),
+    ),
 )
 
 server <- function(input, output) {
@@ -106,7 +133,7 @@ server <- function(input, output) {
         ggplot() +
         geom_boxplot(
             dfFirstMarch, mapping = aes(x = "001 - Début", y =  n_cum_dose1),
-            color = "#009E73", fill = "#A4A4A4", outiler.shape = 8, outlier.size = 4, lwd = 2
+            color = "#009E73", fill = "#A4A4A4", lwd = 2
         ) +
         geom_boxplot(
             dfFifteenJune, mapping = aes(x = "002 - Milieu", y = n_cum_dose1),
@@ -311,6 +338,146 @@ server <- function(input, output) {
             dfFirstJanuary, mapping = aes(x = "003 - Fin", y = n_cum_dose1),
             color = "#56B4E9", fill = "#A4A4A4", outiler.shape = 8, outlier.size = 4, lwd = 2
         )
+    })
+    output$anneeMoisHomme <- renderPlot({
+        ## Si pas de fichier, on ne fait rien
+        if (is.null(input$file1)) {
+            return()
+        }
+        df <- read.csv(input$file1$datapath, header = TRUE, sep = ";")
+        df$date <- as.Date(df$jour, format = "%Y-%m-%d")
+        df$annee <- format(df$date, "%Y")
+        df$mois <- format(df$date, "%m")
+        df$jour <- format(df$date, "%d")
+        df$cum_dose1_homme_global <- cumsum(df$n_dose1_h)
+        df$cum_dose1_femme_global <- cumsum(df$n_dose1_f)
+        dfAnneeMoisHomme <-
+            df %>% group_by(annee, mois) %>% 
+            summarise(cum_dose1_homme_annee_mois = sum(n_dose1_h+n_rappel_h+n_2_rappel_h+n_3_rappel_h))
+        ggplot(dfAnneeMoisHomme, aes(x = mois, y = cum_dose1_homme_annee_mois, fill = annee)) +
+            geom_bar(stat = "identity", position = "dodge") +
+            theme_minimal() +
+            labs(title = "Evolution des doses par mois", x = "Mois", y = "Nombre de doses") +
+            theme(plot.title = element_text(hjust = 0.5))
+    })
+    output$anneeMoisFemme <- renderPlot({
+        ## Si pas de fichier, on ne fait rien
+        if (is.null(input$file1)) {
+            return()
+        }
+        df <- read.csv(input$file1$datapath, header = TRUE, sep = ";")
+        df$date <- as.Date(df$jour, format = "%Y-%m-%d")
+        df$annee <- format(df$date, "%Y")
+        df$mois <- format(df$date, "%m")
+        df$jour <- format(df$date, "%d")
+        df$cum_dose1_homme_global <- cumsum(df$n_dose1_h)
+        df$cum_dose1_femme_global <- cumsum(df$n_dose1_f)
+        dfAnneeMoisFemme <- 
+            df %>% group_by(annee, mois) %>%
+            summarise(cum_dose1_femme_annee_mois = sum(n_dose1_f+n_rappel_f+n_2_rappel_f+n_3_rappel_f))
+        ggplot(dfAnneeMoisFemme, aes(x = mois, y = cum_dose1_femme_annee_mois, fill = annee)) +
+            geom_bar(stat = "identity", position = "dodge") +
+            theme_minimal() +
+            labs(title = "Evolution des doses par mois", x = "Mois", y = "Nombre de doses") +
+            theme(plot.title = element_text(hjust = 0.5))
+
+    })
+    output$anneeMoisHommeRegression <- renderPlot({
+        ## Si pas de fichier, on ne fait rien
+        if (is.null(input$file1)) {
+            return()
+        }
+        df <- read.csv(input$file1$datapath, header = TRUE, sep = ";")
+        df$date <- as.Date(df$jour, format = "%Y-%m-%d")
+        df$annee <- format(df$date, "%Y")
+        df$mois <- format(df$date, "%m")
+        df$jour <- format(df$date, "%d")
+        df$cum_dose1_homme_global <- cumsum(df$n_dose1_h)
+        df$cum_dose1_femme_global <- cumsum(df$n_dose1_f)
+        dfAnneeMoisHomme <-
+            df %>% group_by(annee, mois) %>% 
+            summarise(cum_dose1_homme_annee_mois = sum(n_dose1_h+n_rappel_h+n_2_rappel_h+n_3_rappel_h))
+        dfAnneeMoisFemme <-
+            df %>% group_by(annee, mois) %>%
+            summarise(cum_dose1_femme_annee_mois = sum(n_dose1_f+n_rappel_f+n_2_rappel_f+n_3_rappel_f))
+        a <- cov(dfAnneeMoisHomme$cum_dose1_homme_annee_mois, dfAnneeMoisFemme$cum_dose1_femme_annee_mois) / var(dfAnneeMoisHomme$cum_dose1_homme_annee_mois)
+        b <- mean(dfAnneeMoisFemme$cum_dose1_femme_annee_mois) - a * mean(dfAnneeMoisHomme$cum_dose1_homme_annee_mois)
+        dfAnneeMoisHomme$y <- a * dfAnneeMoisHomme$cum_dose1_homme_annee_mois + b
+        ggplot(dfAnneeMoisHomme, aes(x=dfAnneeMoisHomme$cum_dose1_homme_annee_mois, y=dfAnneeMoisFemme$cum_dose1_femme_annee_mois)) +
+            geom_point() +
+            geom_smooth(method=lm) +
+            labs(title = "Evolution des doses par mois", x = "Nombre de doses par mois pour les hommes", y = "Nombre de doses par mois pour les femmes") +
+            geom_text(aes(label=annee), vjust=-0.5, hjust=0.5, size=3) 
+    })
+    output$prediHomme <- renderPlot({
+        ## Si pas de fichier, on ne fait rien
+        if (is.null(input$file1)) {
+            return()
+        }
+        df <- read.csv(input$file1$datapath, header = TRUE, sep = ";")
+        df$date <- as.Date(df$jour, format = "%Y-%m-%d")
+        df$annee <- format(df$date, "%Y")
+        df$mois <- format(df$date, "%m")
+        df$jour <- format(df$date, "%d")
+        df$cum_dose1_homme_global <- cumsum(df$n_dose1_h)
+        df$cum_dose1_femme_global <- cumsum(df$n_dose1_f)
+        dfAnneeMoisHomme <-
+            df %>% group_by(annee, mois) %>% 
+            summarise(cum_dose1_homme_annee_mois = sum(n_dose1_h+n_rappel_h+n_2_rappel_h+n_3_rappel_h))
+        dfAnneeMoisFemme <-
+            df %>% group_by(annee, mois) %>%
+            summarise(cum_dose1_femme_annee_mois = sum(n_dose1_f+n_rappel_f+n_2_rappel_f+n_3_rappel_f))
+        a <- cov(dfAnneeMoisHomme$cum_dose1_homme_annee_mois, dfAnneeMoisFemme$cum_dose1_femme_annee_mois) / var(dfAnneeMoisHomme$cum_dose1_homme_annee_mois)
+        b <- mean(dfAnneeMoisFemme$cum_dose1_femme_annee_mois) - a * mean(dfAnneeMoisHomme$cum_dose1_homme_annee_mois)
+        dfAnneeMoisHomme$y <- a * dfAnneeMoisHomme$cum_dose1_homme_annee_mois + b
+        dfAnneeMoisHomme$mois_annee <- paste(dfAnneeMoisHomme$annee, dfAnneeMoisHomme$mois, 1, sep = "-")
+        dfAnneeMoisHomme$mois_annee <- as.Date(dfAnneeMoisHomme$mois_annee, format = "%Y-%m-%d")
+        modeleHomme <- lm(cum_dose1_homme_annee_mois ~ poly(mois_annee,1), data = dfAnneeMoisHomme)
+        newHomme <- data.frame(mois_annee = as.Date(c("2023-01-01","2023-02-01","2023-03-01","2023-04-01","2023-05-01","2023-06-01","2023-07-01","2023-08-01","2023-09-01","2023-10-01","2023-11-01","2023-12-01")))
+        predHomme <- predict(modeleHomme, newHomme, interval = "prediction")
+        predHomme <- data.frame(predHomme)
+        newHomme <- data.frame(newHomme)
+        predHomme$range <- (predHomme$upr + predHomme$fit)/2
+        plot(dfAnneeMoisHomme$mois_annee, dfAnneeMoisHomme$cum_dose1_homme_annee_mois, col = "blue", pch = 20, cex = 1.5, xlab = "Mois", ylab = "Nombre de doses", main = "Evolution des doses par mois pour les hommes", xlim= c(as.Date('2020-12-01'), as.Date('2023-12-01')))
+        lines(dfAnneeMoisHomme$mois_annee, dfAnneeMoisHomme$cum_dose1_homme_annee_mois, col = "blue", pch = 20, cex = 1.5, xlab = "Mois", ylab = "Nombre de doses", main = "Evolution des doses par mois pour les hommes", xlim= c(as.Date('2020-12-01'), as.Date('2023-12-01')))
+        points(newHomme$mois_annee, predHomme$fit, col = "green")
+        points(newHomme$mois_annee, predHomme$upr, col = "orange")
+        points(newHomme$mois_annee, predHomme$range, col = "red")
+    })
+    output$prediFemme <- renderPlot({
+        ## Si pas de fichier, on ne fait rien
+        if (is.null(input$file1)) {
+            return()
+        }
+        df <- read.csv(input$file1$datapath, header = TRUE, sep = ";")
+        df$date <- as.Date(df$jour, format = "%Y-%m-%d")
+        df$annee <- format(df$date, "%Y")
+        df$mois <- format(df$date, "%m")
+        df$jour <- format(df$date, "%d")
+        df$cum_dose1_homme_global <- cumsum(df$n_dose1_h)
+        df$cum_dose1_femme_global <- cumsum(df$n_dose1_f)
+        dfAnneeMoisHomme <-
+            df %>% group_by(annee, mois) %>% 
+            summarise(cum_dose1_homme_annee_mois = sum(n_dose1_h+n_rappel_h+n_2_rappel_h+n_3_rappel_h))
+        dfAnneeMoisFemme <-
+            df %>% group_by(annee, mois) %>%
+            summarise(cum_dose1_femme_annee_mois = sum(n_dose1_f+n_rappel_f+n_2_rappel_f+n_3_rappel_f))
+        a <- cov(dfAnneeMoisHomme$cum_dose1_homme_annee_mois, dfAnneeMoisFemme$cum_dose1_femme_annee_mois) / var(dfAnneeMoisHomme$cum_dose1_homme_annee_mois)
+        b <- mean(dfAnneeMoisFemme$cum_dose1_femme_annee_mois) - a * mean(dfAnneeMoisHomme$cum_dose1_homme_annee_mois)
+        dfAnneeMoisHomme$y <- a * dfAnneeMoisHomme$cum_dose1_homme_annee_mois + b
+        dfAnneeMoisFemme$mois_annee <- paste(dfAnneeMoisFemme$annee, dfAnneeMoisFemme$mois, 1, sep = "-")
+        dfAnneeMoisFemme$mois_annee <- as.Date(dfAnneeMoisFemme$mois_annee, format = "%Y-%m-%d")
+        modelFemme <- lm(cum_dose1_femme_annee_mois ~ poly(mois_annee,1), data = dfAnneeMoisFemme)
+        newFemme <- data.frame(mois_annee = as.Date(c("2023-01-01","2023-02-01","2023-03-01","2023-04-01","2023-05-01","2023-06-01","2023-07-01","2023-08-01","2023-09-01","2023-10-01","2023-11-01","2023-12-01")))
+        predFemme <- predict(modelFemme, newFemme, interval = "prediction")
+        newFemme <- data.frame(newFemme)
+        predFemme <- data.frame(predFemme)
+        predFemme$range <- (predFemme$upr + predFemme$fit) /2
+        plot(dfAnneeMoisFemme$mois_annee, dfAnneeMoisFemme$cum_dose1_femme_annee_mois, col = "blue", pch = 20, cex = 1.5, xlab = "Mois", ylab = "Nombre de doses", main = "Evolution des doses par mois pour les femmes", xlim= c(as.Date('2020-12-01'), as.Date('2023-12-01')))
+        lines(dfAnneeMoisFemme$mois_annee, dfAnneeMoisFemme$cum_dose1_femme_annee_mois, col = "blue", pch = 20, cex = 1.5, xlab = "Mois", ylab = "Nombre de doses", main = "Evolution des doses par mois pour les femmes", xlim= c(as.Date('2020-12-01'), as.Date('2023-12-01')))
+        points(newFemme$mois_annee, predFemme$fit, col = "green")
+        points(newFemme$mois_annee, predFemme$upr, col = "orange")
+        points(newFemme$mois_annee, predFemme$range, col = "red")
     })
 }
 
