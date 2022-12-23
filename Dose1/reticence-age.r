@@ -18,14 +18,13 @@ df$n_cum_dose1 <- df$n_cum_dose1_h + df$n_cum_dose1_f
 df <- df %>%
   group_by(date, jour, clage_vacsi) %>%
   summarise(n_cum_dose1 = sum(n_cum_dose1))
-
 # Transform n_cum_dose1 to percentage by age
 df2 <- df %>% group_by(clage_vacsi) %>% summarise(max = (max(n_cum_dose1)))
-
+# Merge df and df2
 df <- merge(x = df, y = df2, by = "clage_vacsi", all.x = TRUE)
-
+# Transform n_cum_dose1 to percentage
 df$n_cum_dose1 <- ((as.double(100)*df$n_cum_dose1) / df$max)
-
+# Display graph
 ggplot(data = df, aes(jour, n_cum_dose1, group = clage_vacsi)) +
   geom_line(aes(color = as.factor(clage_vacsi)), linewidth = 1.2) +
   geom_label(aes(label = clage_vacsi),
