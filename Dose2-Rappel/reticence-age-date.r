@@ -12,7 +12,7 @@ df$date <- as.integer(df$jour)
 # Delete row with clage_vacsi = 0
 df <- subset(df, clage_vacsi != 0)
 
-df$n_cum_rappel <- df$n_cum_rappel_h + df$n_cum_rappel_f
+df$n_cum_rappel <- df$n_cum_2_rappel_f + df$n_cum_2_rappel_h
 
 # Group by date and clage_vacsi
 df <- df %>%
