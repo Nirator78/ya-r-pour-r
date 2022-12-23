@@ -3,8 +3,9 @@ library(dplyr)
 # Import ggplot2
 library(ggplot2)
 
-# Import csv de la liste dans une liste de dataframes 
+
 ## df <- lapply(list.files(pattern = "data_clean.csv"), function(x) read.csv(x, header = TRUE, sep = ";"))
+# Import csv de la liste dans une liste de dataframes 
 df <- read.csv("data_clean.csv", header = TRUE, sep = ";")
 df$date <- as.Date(df$jour, format = "%Y-%m-%d")
 # Faire 3 colonnes pour les mois, les jours et les années
@@ -12,20 +13,24 @@ df$annee <- format(df$date, "%Y")
 df$mois <- format(df$date, "%m")
 df$jour <- format(df$date, "%d")
 
-
-# cumule les doses global
-df$cum_dose1_homme_global <- cumsum(df$n_dose1_h)
-df$cum_dose1_femme_global <- cumsum(df$n_dose1_f)
-
 # group by annee et mois pour les hommes
 dfAnneeMoisHomme <- df %>% group_by(annee, mois) %>% summarise(cum_dose1_homme_annee_mois = sum(n_dose1_h+n_rappel_h+n_2_rappel_h+n_3_rappel_h))
 # group by annee et mois pour les femmes
 dfAnneeMoisFemme <- df %>% group_by(annee, mois) %>% summarise(cum_dose1_femme_annee_mois = sum(n_dose1_f+n_rappel_f+n_2_rappel_f+n_3_rappel_f))
 
+View(dfAnneeMoisHomme)
+View(dfAnneeMoisFemme)
+
 # group by annee et jour pour les hommes
 dfAnneeJourHomme <- df %>% group_by(annee, jour) %>% summarise(cum_dose1_homme_annee_jour = sum(n_dose1_h+n_rappel_h+n_2_rappel_h+n_3_rappel_h)) 
 # groupe by annee et jour pour les femmes
 dfAnneeJourFemme <- df %>% group_by(annee, jour) %>% summarise(cum_dose1_femme_annee_jour = sum(n_dose1_f+n_rappel_f+n_2_rappel_f+n_3_rappel_f))
+
+# Reunir les 2 dataframes ensemble
+dfAnneeMois <- merge(dfAnneeMoisHomme, dfAnneeMoisFemme, by = c("annee", "mois"))
+View(dfAnneeMois)
+# Courbe comparatif des doses par mois hommes et femmes
+ggplot() + geom_point(data = dfAnneeMois, aes(x = mois, y = cum_dose1_homme_annee_mois, color = "Homme")) + geom_point(data = dfAnneeMois, aes(x = mois, y = cum_dose1_femme_annee_mois, color = "Femme")) + theme_minimal() + labs(title = "Evolution des doses par mois", x = "Mois", y = "Nombre de doses") + theme(plot.title = element_text(hjust = 0.5))
 
 # graphique en barre de l'evolution des doses par mois
 ggplot(dfAnneeMoisHomme, aes(x = mois, y = cum_dose1_homme_annee_mois, fill = annee)) + geom_bar(stat = "identity", position = "dodge") + theme_minimal() + labs(title = "Evolution des doses par mois", x = "Mois", y = "Nombre de doses") + theme(plot.title = element_text(hjust = 0.5))
@@ -50,6 +55,13 @@ mean(dfAnneeMoisFemme$cum_dose1_femme_annee_mois)
 # mediane
 median(dfAnneeMoisHomme$cum_dose1_homme_annee_mois)
 median(dfAnneeMoisFemme$cum_dose1_femme_annee_mois)
+# Quantile 1
+quantile(dfAnneeMoisHomme$cum_dose1_homme_annee_mois, 0.25)
+quantile(dfAnneeMoisFemme$cum_dose1_femme_annee_mois, 0.25)
+# Quantile 3
+quantile(dfAnneeMoisHomme$cum_dose1_homme_annee_mois, 0.75)
+quantile(dfAnneeMoisFemme$cum_dose1_femme_annee_mois, 0.75)
+
 # covariances
 cov(dfAnneeMoisHomme$cum_dose1_homme_annee_mois, dfAnneeMoisFemme$cum_dose1_femme_annee_mois)
 # correlation
